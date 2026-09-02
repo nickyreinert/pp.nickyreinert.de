@@ -1,5 +1,5 @@
 import { loadMeta, loadOverviewData, loadPartyData, loadTopicData } from "./data.js";
-import { renderOverview } from "./overview.js";
+import { renderOverview, renderLegislaturperioden, scrollToLegislaturperiode } from "./overview.js";
 import { initSpeakers, rerenderSpeakers, routeSpeakers } from "./speakers.js";
 import { updateParties, routeParties } from "./parties.js";
 import { updateReden, routeReden } from "./reden.js";
@@ -42,6 +42,12 @@ async function boot() {
     register("overview", async () => {
       const [overview, parties] = await Promise.all([loadOverviewData(), loadPartyData()]);
       renderOverview(overview, parties);
+    });
+
+    register("legislaturperioden", async (route) => {
+      const [overview, parties] = await Promise.all([loadOverviewData(), loadPartyData()]);
+      renderLegislaturperioden(overview, parties);
+      scrollToLegislaturperiode(routePeriod(route) || "overall");
     });
 
     register("speakers", async (route) => {

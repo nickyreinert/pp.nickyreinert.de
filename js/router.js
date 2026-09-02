@@ -4,15 +4,15 @@
 
 const handlers = Object.create(null);
 const TAB_ALIASES = Object.freeze({
-  periods: "overview",
+  periods: "legislaturperioden",
   stats: "overview",
   unassigned: "reden",
   unresolved: "reden",
 });
-const TABS = new Set(["overview", "speakers", "parties", "reden", "toc", "polls", "interjections", "fehlliste"]);
+const TABS = new Set(["overview", "legislaturperioden", "speakers", "parties", "reden", "toc", "polls", "interjections", "fehlliste"]);
 let dispatchRevision = 0;
 
-export const TAB_ORDER = ["overview", "speakers", "parties", "reden", "toc", "polls", "interjections", "fehlliste"];
+export const TAB_ORDER = ["overview", "legislaturperioden", "speakers", "parties", "reden", "toc", "polls", "interjections", "fehlliste"];
 
 export function canonicalTab(value) {
   const tab = String(value || "").trim().toLowerCase();

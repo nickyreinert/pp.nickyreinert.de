@@ -22,6 +22,7 @@
     </div>
     <nav aria-label="Ergebnisbereiche" role="tablist">
       <button id="nav-overview" data-tab="overview" class="active" role="tab" aria-selected="true" aria-controls="tab-overview">Übersicht</button>
+      <button id="nav-legislaturperioden" data-tab="legislaturperioden" role="tab" aria-selected="false" aria-controls="tab-legislaturperioden">Legislaturperioden</button>
       <button id="nav-speakers" data-tab="speakers" role="tab" aria-selected="false" aria-controls="tab-speakers">Sprecher:In</button>
       <button id="nav-parties" data-tab="parties" role="tab" aria-selected="false" aria-controls="tab-parties">Parteien</button>
       <button id="nav-reden" data-tab="reden" role="tab" aria-selected="false" aria-controls="tab-reden">Redebeiträge</button>
@@ -37,6 +38,13 @@
     <section id="tab-overview" class="tab active" role="tabpanel" aria-labelledby="nav-overview">
       <div id="overview-content" class="overview" aria-live="polite">
         <p class="muted">Lade Übersicht…</p>
+      </div>
+    </section>
+
+    <!-- LEGISLATURPERIODEN: pro Wahlperiode/Legislaturperiode aufgeschlüsselte Kennzahlen. -->
+    <section id="tab-legislaturperioden" class="tab" role="tabpanel" aria-labelledby="nav-legislaturperioden" hidden>
+      <div id="legislaturperioden-content" class="overview" aria-live="polite">
+        <p class="muted">Lade Legislaturperioden…</p>
       </div>
     </section>
 

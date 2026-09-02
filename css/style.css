@@ -283,6 +283,11 @@ nav button.active { background: #6c8cb0; }
 .overview-exceptions ul { margin: 0; padding-left: 19px; }
 .overview-warning { margin-top: 12px; padding: 8px 10px; border-left: 4px solid #c98925; background: #fff8e8; }
 .overview-warning ul { margin: 4px 0 0; padding-left: 18px; }
+.overview-hero-numbers .metric-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.edge-case-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.edge-case-groups h3 { margin: 0 0 5px; font-size: 13px; color: #294966; }
+.edge-case-groups ul { margin: 0 0 4px; padding-left: 18px; }
+.edge-case-groups li { margin: 0 0 4px; font-size: 12.5px; line-height: 1.4; }
 
 .overview-chart-card { display: grid; grid-template-columns: minmax(260px, .8fr) minmax(300px, 1.2fr); gap: 16px; }
 .overview-bars { display: flex; align-items: end; gap: 5px; min-height: 150px; overflow-x: auto; padding: 8px 2px 0; }
@@ -425,7 +430,7 @@ nav button.active { background: #6c8cb0; }
   .list { max-height: 56vh; }
   .overview-quick-jump, .overview-level-1, .overview-level-2 { position: static; }
   .overview-period, .overview-topic { scroll-margin-top: 12px; }
-  .overview-chart-card, .overview-exceptions, .overview-score-groups { grid-template-columns: 1fr; }
+  .overview-chart-card, .overview-exceptions, .overview-score-groups, .edge-case-groups { grid-template-columns: 1fr; }
   .overview-scorecard-head { display: block; }
   .overview-data-format { grid-template-columns: 1fr; }
   .overview-data-format-marker { display: none; }

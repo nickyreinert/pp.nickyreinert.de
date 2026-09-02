@@ -289,6 +289,67 @@ function availabilityLegend() {
     + '</div>';
 }
 
+function heroNumbers(data) {
+  const general = (data.overall || {}).general || {};
+  return `<section class="overview-about overview-hero-numbers" aria-labelledby="overview-hero-title">
+    <h2 id="overview-hero-title">Kennzahlen</h2>
+    <div class="metric-grid">
+      ${metric("Wahlperioden", (data.periods || []).length)}
+      ${metric("verarbeitete Sitzungen (Protokolldateien)", general.sessions)}
+    </div>
+  </section>`;
+}
+
+// Static, documentation-derived summary (see docs/edge_cases.md, docs/data_edge_cases.md, docs/accepted_losses.md).
+function edgeCaseNotes() {
+  return `<section class="overview-about overview-edge-cases" aria-labelledby="overview-edge-cases-title">
+    <h2 id="overview-edge-cases-title">Bekannte Fehlerquellen und Grenzfälle</h2>
+    <div class="edge-case-groups">
+      <div>
+        <h3>Struktur der Eingabedateien</h3>
+        <ul>
+          <li>Mehrere Sitzungen in einer Datei (49 Dateien) — automatisch getrennt, unkritisch.</li>
+          <li>Sitzung über zwei Kalendertage (8 Dateien) — automatisch getrennt, unkritisch.</li>
+          <li>Dieselbe Sitzung in zwei aufeinanderfolgenden Eingabedateien (48 Fälle, WP1–5) — ca. 1.878 doppelt gezählte Reden (~0,2 %), keine automatische Bereinigung.</li>
+          <li>Anlagenlastige Sitzungen (155 Dateien) — wenig gesprochener Text, viele Anlagen/Abstimmungslisten.</li>
+          <li>Sehr kurze Sitzungen (27 Dateien) — echte kurze Sitzungen, kein Datenfehler.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Statistische Ausreißer</h3>
+        <ul>
+          <li>Hoher Anteil unzugeordneter Zeilen (31 Dateien) — Kandidaten für Regelwerk-Korrekturen.</li>
+          <li>Niedrige Sprecher:innen-Auflösungsrate (42 Dateien, v. a. WP4–5) — noch offene Identitätsklärung.</li>
+          <li>WP14: rund 9.989 unzugeordnete Zeilen, gleichmäßig über alle 253 Dateien verteilt — systematische Ruleset-Lücke, kein Einzeldatei-Fehler.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Einzelfälle in der Quelle</h3>
+        <ul>
+          <li>WP17, Sitzung 250: Quelle dupliziert Eröffnung und Redetext selbst — Zahlen dieser Sitzung sind überhöht, kein Parserfehler.</li>
+          <li>WP4, Datei 04087: zwei Sitzungen (87 und 88) in einer Ausgabedatei zusammengefasst — Sitzungszahl hier untererfasst.</li>
+          <li>Fehlliste-Spaltenumbruch (WP14, Sitzung 88): ein Eintrag nicht rekonstruierbar.</li>
+          <li>Sitzungsendzeit fehlt (ca. 330 Dateien) — reine Feldlücke, kein Redeverlust.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Akzeptierte Restfehler</h3>
+        <ul>
+          <li>Nicht identifizierte Sprecher:innen: ca. 874 Reden (0,09 %) — mehrdeutige Nachnamen ohne Orts- oder Parteisignal.</li>
+          <li>Zwischenruf-Urheber unaufgelöst: ca. 4 % von ca. 971.000 benannten Erwähnungen, v. a. WP1–9 — Quelle nennt nur einen Nachnamen ohne Unterscheidungsmerkmal.</li>
+          <li>OCR-verunstaltete Kopfzeilen: ca. 15–30 Reden betroffen.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Historische Fakten, kein Fehler</h3>
+        <ul>
+          <li>WP9 (142 Sitzungen), WP15 (187 Sitzungen), WP3 (168 Sitzungen): vorzeitig beendete bzw. regulär kürzere Wahlperioden.</li>
+        </ul>
+      </div>
+    </div>
+  </section>`;
+}
+
 function topicSection(topic, block, wp, partyStats) {
   const meta = TOPIC_META[topic];
   return `<section class="overview-topic" id="overview-${wp || "overall"}-${topic}">`
@@ -304,7 +365,7 @@ function chart(data) {
     const coverage = rawCoverage === null || rawCoverage === undefined ? Number.NaN : Number(rawCoverage);
     const height = Number.isFinite(coverage) ? Math.max(4, Math.min(100, coverage * 100)) : 4;
     const coverageLabel = Number.isFinite(coverage) ? value(coverage, "percent") : "unbekannt";
-    return `<button type="button" class="overview-bar" data-tab="overview" data-scroll-wp="${esc(period.period)}"`
+    return `<button type="button" class="overview-bar" data-scroll-wp="${esc(period.period)}"`
       + ` title="WP ${esc(period.period)}: ${coverageLabel}">`
       + `<span class="overview-bar-plot"><span class="overview-bar-value">${esc(coverageLabel)}</span>`
       + `<span class="overview-bar-fill" style="height:${height}%"></span></span><span>WP ${esc(period.period)}</span></button>`;
@@ -324,7 +385,7 @@ function quickJump(periods) {
     key: period.period || period.key || "?",
     label: period.period || period.key || "?",
   })));
-  return `<div class="overview-quick-jump" role="navigation" aria-label="Schnellsprung zu Wahlperioden">
+  return `<div class="overview-quick-jump" role="navigation" aria-label="Schnellsprung zu Legislaturperioden">
     <span class="overview-quick-jump-label">Schnellsprung</span>
     <div class="overview-quick-jump-items">${targets.map((target, index) =>
       `<button class="overview-quick-jump-button${index === 0 ? " active" : ""}" type="button"
@@ -351,7 +412,7 @@ function scrollToPeriod(host, wp) {
 
 function section(title, record, wp, overall = false, data = {}, partyStats = null) {
   const block = record || {};
-  const label = overall ? "Gesamtüberblick" : `Wahlperiode ${wp}`;
+  const label = overall ? "Gesamtüberblick" : `Legislaturperiode ${wp}`;
   return `<section class="overview-period" id="overview-wp-${esc(wp || "overall")}">`
     + `<h2 class="overview-level-1">${esc(label)}</h2>`
     + `<p class="overview-status">${availability(block.general || {})}</p>`
@@ -361,16 +422,15 @@ function section(title, record, wp, overall = false, data = {}, partyStats = nul
 }
 
 function bindDrilldowns(host) {
-  host.querySelectorAll(".overview-quick-jump-button").forEach((button) => button.addEventListener("click", () => {
-    scrollToPeriod(host, button.dataset.scrollWp);
+  // Same-page scroll if the target section is already rendered in this host
+  // (quick-jump within Legislaturperioden); otherwise navigate to that tab.
+  host.querySelectorAll("[data-scroll-wp]").forEach((button) => button.addEventListener("click", () => {
+    const wp = button.dataset.scrollWp;
+    if (host.querySelector(`[id="overview-wp-${wp}"]`)) scrollToPeriod(host, wp);
+    else setRoute("legislaturperioden", { wp });
   }));
   host.querySelectorAll("[data-tab]").forEach((button) => button.addEventListener("click", () => {
-    const target = button.dataset.tab;
-    if (target === "overview" && button.dataset.scrollWp) {
-      scrollToPeriod(host, button.dataset.scrollWp);
-      return;
-    }
-    setRoute(target, {
+    setRoute(button.dataset.tab, {
       wp: button.dataset.wp || "",
       mode: button.dataset.mode || "",
     });
@@ -403,7 +463,16 @@ export function renderOverview(data, partyStats = null) {
     + `<div><h3>Akzeptierte / bekannte Grenzen</h3><ul>${listItems(about.accepted_limitations)}</ul></div></div>`
     + (reconciliation.length ? `<div class="overview-warning"><strong>Abgleichhinweise:</strong><ul>${reconciliation.map((item) => `<li>${esc(item)}</li>`).join("")}</ul></div>` : "")
     + `</section>`
-    + chart(data)
+    + heroNumbers(data)
+    + edgeCaseNotes()
+    + chart(data);
+  bindDrilldowns(host);
+}
+
+export function renderLegislaturperioden(data, partyStats = null) {
+  const host = document.getElementById("legislaturperioden-content");
+  if (!host) return;
+  host.innerHTML = availabilityLegend()
     + quickJump(data.periods || [])
     + section("Gesamtüberblick", data.overall || {}, "", true, data, partyStats)
     + (data.periods || []).map((period) => section("", period, period.period || period.key || "?", false, {}, partyStats)).join("")
@@ -413,4 +482,10 @@ export function renderOverview(data, partyStats = null) {
     + `<p id="overview-help-body"></p></dialog>`;
   bindDrilldowns(host);
   bindHelp(host);
+}
+
+export function scrollToLegislaturperiode(wp) {
+  const host = document.getElementById("legislaturperioden-content");
+  if (!host) return;
+  scrollToPeriod(host, wp || "overall");
 }
