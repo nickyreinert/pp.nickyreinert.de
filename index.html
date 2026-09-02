@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Plenarprotokolle Browser</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-title-row">
+      <div>
+        <h1>Plenarprotokolle Browser</h1>
+        <p id="meta" class="meta">Lade Übersicht…</p>
+      </div>
+      <div class="global-search">
+        <label class="visually-hidden" for="global-search">Alles durchsuchen</label>
+        <input id="global-search" type="search" autocomplete="off"
+               placeholder="Alles durchsuchen – Sprecher:innen, Tagesordnung, Abstimmungen…" />
+        <div id="global-results" class="gs-results" role="listbox" aria-label="Suchergebnisse"></div>
+      </div>
+    </div>
+    <nav aria-label="Ergebnisbereiche" role="tablist">
+      <button id="nav-overview" data-tab="overview" class="active" role="tab" aria-selected="true" aria-controls="tab-overview">Übersicht</button>
+      <button id="nav-speakers" data-tab="speakers" role="tab" aria-selected="false" aria-controls="tab-speakers">Sprecher:In</button>
+      <button id="nav-parties" data-tab="parties" role="tab" aria-selected="false" aria-controls="tab-parties">Parteien</button>
+      <button id="nav-reden" data-tab="reden" role="tab" aria-selected="false" aria-controls="tab-reden">Redebeiträge</button>
+      <button id="nav-toc" data-tab="toc" role="tab" aria-selected="false" aria-controls="tab-toc">Tagesordnung</button>
+      <button id="nav-polls" data-tab="polls" role="tab" aria-selected="false" aria-controls="tab-polls">Abstimmungen</button>
+      <button id="nav-interjections" data-tab="interjections" role="tab" aria-selected="false" aria-controls="tab-interjections">Zwischenrufe</button>
+      <button id="nav-fehlliste" data-tab="fehlliste" role="tab" aria-selected="false" aria-controls="tab-fehlliste">Fehlliste</button>
+    </nav>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <!-- ÜBERSICHT: compact data-health / aggregate overview. -->
+    <section id="tab-overview" class="tab active" role="tabpanel" aria-labelledby="nav-overview">
+      <div id="overview-content" class="overview" aria-live="polite">
+        <p class="muted">Lade Übersicht…</p>
+      </div>
+    </section>
+
+    <!-- SPRECHER -->
+    <section id="tab-speakers" class="tab" role="tabpanel" aria-labelledby="nav-speakers" hidden>
+      <div class="controls tab-toolbar" aria-label="Schnellfilter Sprecher:In">
+        <label class="search-control" for="search">Suchen
+          <input id="search" type="search" placeholder="Sprecher:In suchen (Name, Partei)…" />
+        </label>
+        <label>Status
+          <select id="state-filter" title="Status Sprecher:In">
+            <option value="">Alle</option>
+            <option value="identified">Identifiziert</option>
+            <option value="review">Prüfen</option>
+            <option value="missing">Fehlend</option>
+          </select>
+        </label>
+        <label>Wahlperiode:
+          <select id="wp-filter" title="Wahlperiode"></select>
+        </label>
+        <label class="muted">XML:
+          <select id="xml-source">
+            <option value="vscode">VS Code (lokal, genaue Zeile)</option>
+            <option value="github">GitHub</option>
+            <option value="pdf">PDF</option>
+          </select>
+        </label>
+        <span id="speaker-count" class="muted" aria-live="polite"></span>
+      </div>
+      <section class="tab-context" aria-label="Einordnung der Sprecher:innen-Status">
+        <div id="speaker-states" class="summary-chips ur-cats"></div>
+      </section>
+      <div class="master-detail split">
+        <div class="list-col master-pane">
+          <div id="speaker-list" class="list" aria-label="Sprecher:innenliste"></div>
+          <div id="speaker-pagination" class="pagination" aria-label="Seitennavigation Sprecher:innen"></div>
+        </div>
+        <aside id="detail" class="detail" aria-live="polite"><p class="muted">Sprecher:In auswählen, um Details und Quellen zu sehen.</p></aside>
+      </div>
+    </section>
+
+    <!-- PARTEIEN -->
+    <section id="tab-parties" class="tab" role="tabpanel" aria-labelledby="nav-parties" hidden>
+      <div class="controls tab-toolbar" aria-label="Schnellfilter Parteien">
+        <label>Wahlperiode
+          <select id="party-wp-filter" title="Wahlperiode"></select>
+        </label>
+        <label class="search-control" for="party-search">Suchen
+          <input id="party-search" type="search" placeholder="Partei suchen…" />
+        </label>
+        <span id="party-count" class="muted" aria-live="polite"></span>
+      </div>
+      <section class="tab-context party-intro" aria-labelledby="parties-title">
+        <h2 id="parties-title">Erkannte Parteien</h2>
+        <p>Die Liste zeigt die in den Redebeiträgen erkannten, normalisierten Parteibezeichnungen. Die Zahl rechts ist die Anzahl zugeordneter Redebeiträge, nicht die Zahl der Mitglieder.</p>
+      </section>
+      <div id="party-list" class="list party-list" aria-label="Erkannte Parteien"></div>
+    </section>
+
+    <!-- REDEBEITRÄGE: unresolved speaker groups and unassigned text residues. -->
+    <section id="tab-reden" class="tab" role="tabpanel" aria-labelledby="nav-reden" hidden>
+      <div class="controls tab-toolbar" aria-label="Schnellfilter Redebeiträge">
+        <label>Ansicht:
+          <select id="reden-mode" title="Ansicht Redebeiträge">
+            <option value="unresolved">Offene Sprecher:innen</option>
+            <option value="unassigned">Unzugeordnete Zeilen</option>
+          </select>
+        </label>
+        <label>Wahlperiode:
+          <select id="reden-wp-filter" title="Wahlperiode"></select>
+        </label>
+        <label>Kategorie:
+          <select id="reden-category" title="Fehlerkategorie"></select>
+        </label>
+        <label class="search-control" for="reden-search">Suchen
+          <input id="reden-search" type="search" placeholder="Name, Rohtext oder Datei suchen…" />
+        </label>
+        <span id="reden-count" class="muted" aria-live="polite"></span>
+      </div>
+      <section class="tab-context tab-intro">
+        <h2>Redebeiträge prüfen</h2>
+        <p>Offene Sprecher:innen-Zuordnungen und Textreste, die keinem Redebeitrag zugeordnet wurden. Die Liste links dient zum Durchsehen, die Details und das Fix-Paket stehen rechts.</p>
+        <div id="reden-groups" class="summary-chips" aria-label="Fehlergruppen"></div>
+      </section>
+      <div class="master-detail split">
+        <div class="list-col master-pane">
+          <div id="reden-list" class="list" aria-label="Zu prüfende Redebeiträge"></div>
+          <div id="reden-pagination" class="pagination" aria-label="Seitennavigation Redebeiträge"></div>
+        </div>
+        <aside id="reden-detail" class="detail" aria-live="polite"><p class="muted">Ein Ergebnis auswählen, um Quellen und ein Fix-Paket zu sehen.</p></aside>
+      </div>
+    </section>
+
+    <!-- TAGESORDNUNG -->
+    <section id="tab-toc" class="tab" role="tabpanel" aria-labelledby="nav-toc" hidden>
+      <div class="controls tab-toolbar" aria-label="Schnellfilter Tagesordnung">
+        <label>Wahlperiode:
+          <select id="toc-wp-filter" title="Wahlperiode"></select>
+        </label>
+        <label class="search-control" for="toc-search">Suchen
+          <input id="toc-search" type="search" placeholder="Sitzung, Thema oder Sprecher:In suchen…" />
+        </label>
+        <span id="toc-count" class="muted" aria-live="polite"></span>
+      </div>
+      <div class="master-detail split">
+        <div class="list-col master-pane">
+          <div id="toc-list" class="list toc-tree" aria-label="Tagesordnungsbaum"></div>
+          <div id="toc-pagination" class="pagination" aria-label="Seitennavigation Tagesordnung"></div>
+        </div>
+        <aside id="toc-detail" class="detail" aria-live="polite"><p class="muted">Eine Sitzung oder einen Tagesordnungspunkt auswählen, um den Inhalt und ein Fix-Paket zu sehen.</p></aside>
+      </div>
+    </section>
+
+    <!-- ABSTIMMUNGEN -->
+    <section id="tab-polls" class="tab" role="tabpanel" aria-labelledby="nav-polls" hidden>
+      <div class="controls tab-toolbar" aria-label="Schnellfilter Abstimmungen">
+        <label>Wahlperiode:
+          <select id="poll-wp-filter" title="Wahlperiode"></select>
+        </label>
+        <label class="search-control" for="poll-search">Suchen
+          <input id="poll-search" type="search" placeholder="Sitzung oder Art der Abstimmung suchen…" />
+        </label>
+        <span id="poll-count" class="muted" aria-live="polite"></span>
+      </div>
+      <div class="master-detail split">
+        <div class="list-col master-pane">
+          <div id="poll-list" class="list" aria-label="Abstimmungsliste"></div>
+          <div id="poll-pagination" class="pagination" aria-label="Seitennavigation Abstimmungen"></div>
+        </div>
+        <aside id="poll-detail" class="detail" aria-live="polite"><p class="muted">Eine Abstimmung auswählen, um Ergebnis, Quellen und ein Fix-Paket zu sehen.</p></aside>
+      </div>
+    </section>
+
+    <!-- ZWISCHENRUFE -->
+    <section id="tab-interjections" class="tab" role="tabpanel" aria-labelledby="nav-interjections" hidden>
+      <div class="controls tab-toolbar" aria-label="Schnellfilter Zwischenrufe">
+        <label>Wahlperiode:
+          <select id="ij-wp-filter" title="Wahlperiode"></select>
+        </label>
+        <label>Typ:
+          <select id="ij-type-filter" title="Typ Zwischenruf"></select>
+        </label>
+        <label class="search-control" for="ij-people-search">Person suchen
+          <input id="ij-people-search" type="search" placeholder="Person suchen…" />
+        </label>
+        <span id="ij-people-count" class="muted" aria-live="polite"></span>
+      </div>
+      <section class="tab-context interjection-types" aria-labelledby="ij-types-title">
+        <h2 id="ij-types-title">Typen</h2>
+        <div id="ij-types" class="ij-kinds" aria-label="Zwischenruf-Typen"></div>
+        <p id="ij-types-note" class="muted">Ein Typ filtert die Ergebnisse darunter. Die Diagnose trennt bewusst verworfene, ereignislose und als Fallback klassifizierte Einträge.</p>
+      </section>
+      <section id="ij-audit" class="interjection-audit" aria-live="polite" aria-label="Erfassungsdiagnostik Zwischenrufe">
+        <p class="muted">Die Erfassungsdiagnostik wird mit den Zwischenrufdaten geladen.</p>
+      </section>
+      <section id="ij-type-examples" class="ij-type-examples" aria-live="polite" aria-label="Beispiele zum ausgewählten Zwischenruf-Typ" hidden></section>
+      <div class="master-detail split">
+        <div class="list-col master-pane">
+          <div id="ij-people-list" class="list" aria-label="Personen mit Zwischenrufen"></div>
+          <div id="ij-pagination" class="pagination" aria-label="Seitennavigation Zwischenrufe"></div>
+        </div>
+        <aside id="ij-people-detail" class="detail" aria-live="polite"><p class="muted">Eine Person auswählen, um Beispiele, Quellen und ein Fix-Paket zu sehen.</p></aside>
+      </div>
+    </section>
+
+    <!-- FEHLLISTE -->
+    <section id="tab-fehlliste" class="tab" role="tabpanel" aria-labelledby="nav-fehlliste" hidden>
+      <div class="controls tab-toolbar" aria-label="Schnellfilter Fehlliste">
+        <label>Ansicht:
+          <select id="fl-view" title="Fehllistenansicht">
+            <option value="people">Personen</option>
+            <option value="sessions">Sitzungen</option>
+          </select>
+        </label>
+        <label>Wahlperiode:
+          <select id="fl-wp-filter" title="Wahlperiode"></select>
+        </label>
+        <label class="search-control" for="fl-people-search">Suchen
+          <input id="fl-people-search" type="search" placeholder="Person suchen…" />
+        </label>
+        <label class="search-control" for="fl-sessions-search">Sitzung suchen
+          <input id="fl-sessions-search" type="search" placeholder="Sitzung suchen…" />
+        </label>
+        <span id="fl-count" class="muted" aria-live="polite"></span>
+      </div>
+      <section class="tab-context tab-intro">
+        <h2>Fehlliste</h2>
+        <p>Dokumentierte Entschuldigungs- und Beurlaubungsvermerke je Sitzung. Ein Status oder eine Rücknahme wird nur gezeigt, wenn die Quelle ihn ausdrücklich nennt. Dies ist kein vollständiges Register aller Abwesenheiten; nicht überlieferte oder nicht eindeutig klassifizierbare Fälle bleiben unbekannt.</p>
+      </section>
+      <div class="master-detail split">
+        <div class="list-col master-pane">
+          <div id="fl-list" class="list" aria-label="Fehllisten-Ergebnisse"></div>
+          <!-- Legacy list targets stay in the DOM until every generated data version has migrated. -->
+          <div id="fl-people-list" class="list legacy-list" aria-label="Fehllisten-Personen"></div>
+          <div id="fl-sessions-list" class="list legacy-list" aria-label="Fehllisten-Sitzungen"></div>
+          <div id="fl-pagination" class="pagination" aria-label="Seitennavigation Fehlliste"></div>
+        </div>
+        <aside id="fl-detail" class="detail" aria-live="polite"><p class="muted">Eine Person oder Sitzung auswählen, um die überlieferten Vermerke, Quellen und ein Fix-Paket zu sehen.</p></aside>
+        <aside id="fl-session-detail" class="detail legacy-detail" aria-live="polite"><p class="muted">Sitzung auswählen für überlieferte Vermerke und Quellen.</p></aside>
+      </div>
+      <span id="fl-people-count" class="visually-hidden"></span>
+      <span id="fl-sessions-count" class="visually-hidden"></span>
+    </section>
+  </main>
+
+  <!-- Feedback / selection bar (pipeline export remains opt-in). -->
+  <div id="selbar" class="selbar">
+    <span id="sel-count" class="muted">0 ausgewählt</span>
+    <label>Aktion:
+      <select id="sel-action">
+        <option value="merge">zusammenführen (merge)</option>
+        <option value="fix">korrigieren (fix)</option>
+        <option value="split">trennen (split)</option>
+        <option value="garbage">Garbage entfernen</option>
+        <option value="flag">markieren</option>
+      </select>
+    </label>
+    <label class="visually-hidden" for="sel-note">Notiz</label>
+    <input id="sel-note" type="text" placeholder="Notiz (optional)" />
+    <button id="sel-export" type="button">Export für Pipeline</button>
+    <button id="sel-clear" type="button">Leeren</button>
+  </div>
+  <noscript><p class="noscript">Für die Ergebnisansicht wird JavaScript benötigt.</p></noscript>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
