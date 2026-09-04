@@ -12,6 +12,8 @@ let POLL_PERIODS = [];
 let PEOPLE = [];
 let TYPES = [];
 let TYPE_SAMPLES = {};
+let TYPE_ATTR = {};
+let IJ_GROUPS = [];
 let IJ_PERIODS = [];
 let IJ_AUDIT = null;
 let CURRENT_POLL = null;
@@ -285,6 +287,8 @@ export function updateInterjections(payload) {
   IJ_AUDIT = records.interjection_audit || records.audit || null;
   TYPES = records.types || [];
   TYPE_SAMPLES = normalizeTypeSamples(records.type_samples);
+  TYPE_ATTR = records.type_attribution || {};
+  IJ_GROUPS = records.groups || [];
   PEOPLE = records.people || [];
   IJ_PERIODS = indexPeriods((payload || {}).index, (records.polls || []).concat(
     PEOPLE.flatMap((person) => (person.samples || []).map((sample) => ({ period: sample.period }))),
@@ -334,6 +338,35 @@ function sampleHtml(sample) {
     + `${xml ? ` <a href="${esc(xml.href)}" target="_blank" rel="noopener">${esc(xml.text)}</a>` : ""}</div></article>`;
 }
 
+function attributionHtml(type) {
+  const attr = TYPE_ATTR[type];
+  if (!attr) return "";
+  const person = Number(attr.person || 0);
+  const group = Number(attr.group || 0);
+  const none = Number(attr.none || 0);
+  const total = person + group + none;
+  if (!total) return "";
+  const parts = [`${number(total)} Ereignisse`];
+  if (person) parts.push(`${number(person)} einer Person zugeordnet`);
+  if (group) parts.push(`${number(group)} nur einer Fraktion`);
+  if (none) parts.push(`${number(none)} ohne Zuordnung`);
+  let factions = "";
+  if (group || (none && !person)) {
+    const rows = IJ_GROUPS
+      .map((row) => ({ name: row.name, count: Number((row.by_type || {})[type] || 0) }))
+      .filter((row) => row.count > 0)
+      .sort((a, b) => b.count - a.count);
+    if (rows.length) {
+      factions = `<p class="muted ij-type-factions">Fraktionen: `
+        + rows.map((row) => `${esc(row.name)} (${number(row.count)})`).join(" · ") + `</p>`;
+    }
+  }
+  return `<p class="ij-type-attribution">${parts.join(" · ")}</p>`
+    + (none ? `<p class="muted">„ohne Zuordnung“ sind Verfahrens- und Saalereignisse `
+      + `(Glocke, Mikrofon, Saalgeschehen) sowie anonyme Rufe ohne genannte Fraktion.</p>` : "")
+    + factions;
+}
+
 function renderTypeExamples() {
   const host = byId("ij-type-examples");
   if (!host) return;
@@ -346,6 +379,7 @@ function renderTypeExamples() {
   const samples = TYPE_SAMPLES[selectedType] || [];
   host.hidden = false;
   host.innerHTML = `<h3>Beispiele zum Typ ${esc(selectedType)}</h3>`
+    + attributionHtml(selectedType)
     + `<p class="muted">Diese Beispiele zeigen den Zwischenruf-Typ insgesamt. Sie beziehen sich nicht notwendigerweise auf die rechts ausgewählte Person.</p>`
     + `<div class="ij-type-sample-list">${samples.map(sampleHtml).join("") || `<p class="muted">Für diesen Typ sind noch keine gespeicherten Beispiele vorhanden.</p>`}</div>`;
 }
@@ -378,9 +412,13 @@ function renderInterjections(route) {
   const rows = peopleFiltered();
   const page = pageSlice(rows, route.params.get("page"), PAGE_SIZE);
   const list = byId("ij-people-list");
+  const selectedType = byId("ij-type-filter")?.value || "";
+  const emptyMsg = selectedType && (TYPE_ATTR[selectedType] || {}).person === 0
+    ? "Für diesen Typ ist kein Ereignis einer namentlich genannten Person zugeordnet - siehe Aufschlüsselung links."
+    : "Keine Personen für diese Auswahl.";
   list.innerHTML = page.rows.map((person) =>
     `<button class="row result-row" type="button" data-id="${esc(person.name)}"><span class="nm">${esc(person.name)}</span><span class="cnt">${number(person._count)}</span></button>`
-  ).join("") || "<p class=\"muted\">Keine Personen für diese Auswahl.</p>";
+  ).join("") || `<p class="muted">${esc(emptyMsg)}</p>`;
   markSelected(list, route.id);
   byId("ij-people-count").textContent = `${number(rows.length)} Personen`;
   renderPagination(byId("ij-pagination"), page.page, rows.length, PAGE_SIZE, (next) => {

@@ -418,6 +418,8 @@ nav button.active { background: #6c8cb0; }
 }
 .ij-type-examples h3 { margin: 0 0 4px; font-size: 15px; color: #213d58; }
 .ij-type-examples > .muted { margin: 0 0 7px; }
+.ij-type-attribution { margin: 0 0 5px; font-size: 13px; color: #213d58; font-weight: 600; }
+.ij-type-factions { margin: 0 0 7px; font-size: 11px; line-height: 1.5; }
 .ij-type-sample-list .ij-sample:last-child { border-bottom: 0; }
 .ij-kinds { margin: 6px 0; }
 .compact-row { grid-template-columns: minmax(0, 1fr) auto; cursor: default; }
