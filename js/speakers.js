@@ -244,6 +244,10 @@ function showDetail(s) {
     ? `<h4>Namensvarianten (${variants.length})</h4>`
       + `<div class="variants">${variants.map((v) => esc(v)).join("<br>")}</div>`
     : "";
+  // Available regardless of state: a garbage string can coincidentally
+  // string-match a real surname and sit in "identified" with a wrong
+  // person_id, not just in "review"/"missing".
+  const notAPersonBtn = `<button id="copy-not-a-person" type="button">Keine Person: Edge-Case-Paket kopieren</button>`;
   const d = document.getElementById("detail");
   d.innerHTML = `<h3>${esc(s.raw)}</h3>`
     + `<p class="muted">person_id: ${s.person_id || "(unaufgeloest)"}`
@@ -251,14 +255,22 @@ function showDetail(s) {
     + variantsHtml
     + `<h4>Quellen</h4>${srcs}`
     + `<button id="copy-fixpacket" type="button">Fix-Paket kopieren</button>`
+    + notAPersonBtn
     + `<p class="muted">Ins Agenten-Fenster einfuegen; die Anleitung steht in docs/MANUAL_FIXES.md.</p>`;
+  const packetSource = {
+    ...s,
+    sources_sampled: true,
+    source_note: "Die veröffentlichten Quellen sind eine repräsentative, über Wahlperioden ausgewogene Auswahl (bis zu 30), nicht alle Wortmeldungen.",
+  };
   d.querySelector("#copy-fixpacket").addEventListener("click", (e) => {
-    copyFixPacket("speaker", {
-      ...s,
-      sources_sampled: true,
-      source_note: "Die veröffentlichten Quellen sind eine repräsentative, über Wahlperioden ausgewogene Auswahl (bis zu 30), nicht alle Wortmeldungen.",
-    }, e.currentTarget);
+    copyFixPacket("speaker", packetSource, e.currentTarget);
   });
+  const notAPersonEl = d.querySelector("#copy-not-a-person");
+  if (notAPersonEl) {
+    notAPersonEl.addEventListener("click", (e) => {
+      copyFixPacket("speaker_not_a_person", packetSource, e.currentTarget);
+    });
+  }
 }
 
 function clearDetail() {

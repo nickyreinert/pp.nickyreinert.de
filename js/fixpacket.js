@@ -81,6 +81,21 @@ function speakerBody(s) {
   );
 }
 
+function notAPersonBody(s) {
+  return (
+    `kind: not_a_person\n` +
+    `raw: ${s.raw}\n` +
+    `current person_id: ${s.person_id || "(unresolved)"}\n` +
+    `periods: ${(s.periods || []).join(", ") || "-"}\n` +
+    `speeches: ${s.count ?? "-"}\n` +
+    `name variants: ${(s.variants || []).join(" | ") || "-"}\n` +
+    `reporter note: this string is not a person (organisation, publication,\n` +
+    `  quoted phrase, or other non-speaker text) - it should stop appearing\n` +
+    `  as an unresolved speaker candidate.\n` +
+    `sources:\n${sourceLines(s.sources, s)}`
+  );
+}
+
 function groupBody(g) {
   return (
     `kind: unresolved_group\n` +
@@ -107,7 +122,11 @@ function genericBody(kind, e) {
   );
 }
 
-const BUILDERS = { speaker: speakerBody, unresolved_group: groupBody };
+const BUILDERS = {
+  speaker: speakerBody,
+  unresolved_group: groupBody,
+  speaker_not_a_person: notAPersonBody,
+};
 
 // --- PUBLIC ---
 
