@@ -296,12 +296,58 @@ function availabilityLegend() {
 
 function heroNumbers(data) {
   const general = (data.overall || {}).general || {};
+  const coverage = general.coverage || {};
   return `<section class="overview-about overview-hero-numbers" aria-labelledby="overview-hero-title">
     <h2 id="overview-hero-title">Kennzahlen</h2>
     <div class="metric-grid">
       ${metric("Wahlperioden", (data.periods || []).length)}
       ${metric("verarbeitete Sitzungen (Protokolldateien)", general.sessions)}
+      ${metric("Abdeckung", coverage.overall, { kind: "percent", help: "coverage" })}
     </div>
+  </section>`;
+}
+
+// Short glossary of terms used throughout the site. Kept flat (no
+// sub-grouping) since a glossary is looked up by term, not read top to
+// bottom like the edge-case notes below it.
+function nomenclature() {
+  const terms = [
+    ["Wahlperiode (WP)", "Eine gewählte Legislaturperiode des Bundestages, WP1 (1949–1953) bis WP21 (laufend)."],
+    ["Sitzung", "Eine einzelne Plenarsitzung, meist ein Kalendertag. Kann über mehrere Quelldateien oder zwei Kalendertage verteilt sein - siehe Grenzfälle unten."],
+    ["Rede", "Ein zusammenhängender Redebeitrag einer Person zu einem Tagesordnungspunkt."],
+    ["Zwischenfrage", "Eine kurze Antwort innerhalb eines fremden Redebeitrags. Heuristisch erkannt (ein nicht-präsidierender Beitrag von höchstens 150 Wörtern zwischen zwei Beiträgen derselben Person) - eine nützliche Auswertungshilfe, keine belegte Gesprächsannotation."],
+    ["Sitzungsleitung", "Ein Wortbeitrag der amtierenden Präsidiumsperson: Eröffnung, Worterteilung, Abstimmungsleitung."],
+    ["Zwischenruf", "Ein kurzer Zuruf aus dem Plenum während der Rede einer anderen Person, mit Typ (z. B. Beifall, Zuruf, Lachen) und, wenn ermittelbar, Urheber:in und Fraktion."],
+    ["Namentliche Abstimmung", "Eine Abstimmung, bei der jede Stimme einzeln mit Namen protokolliert wird, mit Ja-/Nein-/Enthaltungs-Gesamtzahl."],
+    ["Fehlliste", "Die amtlich vermerkte Liste entschuldigter, beurlaubter oder unentschuldigt fehlender Abgeordneter einer Sitzung."],
+    ["person_id / speaker_id", "person_id verweist auf eine amtlich verifizierte Identität (Person-Stammdaten). speaker_id gruppiert eine Rohtext-Sprecherbezeichnung, auch wenn ihr noch keine Identität zugeordnet ist - ohne person_id bleibt der Redebeitrag trotzdem einer Gruppe zugeordnet, nur eben unaufgelöst."],
+    ["identity_type", "Die Art der Identität einer sprechenden Person: Abgeordnete:r (MdB), Bundesregierung (Minister:in, Staatssekretär:in - nicht jede:r ist zugleich MdB), Bundesrat/Land oder unverifiziert. Details im Datenmodell unten."],
+    ["Partei vs. party_family", "Partei ist die Fraktion zum Zeitpunkt der Rede (PDS und DIE LINKE bleiben distinkt). party_family fasst eine politische Linie epochenübergreifend zusammen (PDS/DIE LINKE → DIE LINKE), für Auswertungen über mehrere Wahlperioden hinweg."],
+  ];
+  return `<section class="overview-about overview-glossary" aria-labelledby="overview-glossary-title">
+    <h2 id="overview-glossary-title">Nomenklatur</h2>
+    <dl>${terms.map(([term, def]) => `<dt>${esc(term)}</dt><dd>${esc(def)}</dd>`).join("")}</dl>
+  </section>`;
+}
+
+// Mirrors export/SCHEMA.md's table list - keep the two in sync by hand when
+// the export gains or drops a table.
+function dataModel() {
+  const entities = [
+    ["Sitzungen", "Eine Zeile pro Plenarsitzung: Datum, Ort, Dauer, Zahl der Reden/Zwischenrufe/Abstimmungen."],
+    ["Redebeiträge", "Eine Zeile pro Wortbeitrag, verknüpft mit Sprecher:in, Partei zum Redezeitpunkt und Sitzung."],
+    ["Sprecher:innen", "Eine Zeile pro eindeutig identifizierter Sprecher-Identität: identity_type, Redezahl, Wahlperioden."],
+    ["Parteien", "Eine Zeile pro Partei/Fraktion, mit party_family für epochenübergreifende Auswertungen."],
+    ["Zwischenrufe", "Eine Zeile pro Ereignis: Typ, Urheber:in (wenn ermittelbar) und der Redebeitrag, in den hineingerufen wurde."],
+    ["Abstimmungen und Einzelstimmen", "Eine Zeile pro namentlicher Abstimmung bzw. pro abgegebener Einzelstimme mit Name und Fraktion."],
+    ["Tagesordnung", "Sitzungen und ihre Tagesordnungspunkte, aus der amtlichen Quelle oder, wo diese fehlt (v. a. WP1–6), aus dem Protokoll rekonstruiert."],
+    ["Fehlliste", "Entschuldigungs- und Beurlaubungsvermerke pro Sitzung und Person."],
+    ["Wahlperioden", "Stammdaten je Wahlperiode: Zeitraum, Sitzverteilung."],
+  ];
+  return `<section class="overview-about overview-glossary" aria-labelledby="overview-datamodel-title">
+    <h2 id="overview-datamodel-title">Datenmodell</h2>
+    <p class="muted">Diese Ansicht zeigt die Konzepte; die Tabellen mit Spaltennamen stehen in <code>export/SCHEMA.md</code> im Pickle-/Excel-Export.</p>
+    <dl>${entities.map(([name, def]) => `<dt>${esc(name)}</dt><dd>${esc(def)}</dd>`).join("")}</dl>
   </section>`;
 }
 
@@ -442,6 +488,15 @@ function bindDrilldowns(host) {
   }));
 }
 
+// Shared by both render functions below, each of which writes to its own
+// host element and so needs its own copy of the dialog in its subtree.
+function helpModalMarkup() {
+  return `<dialog id="overview-help-modal" class="overview-help-modal" aria-labelledby="overview-help-title">`
+    + `<div class="overview-help-modal-head"><h2 id="overview-help-title">Erläuterung</h2>`
+    + `<button class="overview-help-close" type="button" data-help-close aria-label="Erläuterung schließen">×</button></div>`
+    + `<p id="overview-help-body"></p></dialog>`;
+}
+
 function bindHelp(host) {
   const dialog = host.querySelector("#overview-help-modal");
   const title = dialog?.querySelector("#overview-help-title");
@@ -469,9 +524,13 @@ export function renderOverview(data, partyStats = null) {
     + (reconciliation.length ? `<div class="overview-warning"><strong>Abgleichhinweise:</strong><ul>${reconciliation.map((item) => `<li>${esc(item)}</li>`).join("")}</ul></div>` : "")
     + `</section>`
     + heroNumbers(data)
+    + nomenclature()
+    + dataModel()
     + edgeCaseNotes()
-    + chart(data);
+    + chart(data)
+    + helpModalMarkup();
   bindDrilldowns(host);
+  bindHelp(host);
 }
 
 export function renderLegislaturperioden(data, partyStats = null) {
@@ -481,10 +540,7 @@ export function renderLegislaturperioden(data, partyStats = null) {
     + quickJump(data.periods || [])
     + section("Gesamtüberblick", data.overall || {}, "", true, data, partyStats)
     + (data.periods || []).map((period) => section("", period, period.period || period.key || "?", false, {}, partyStats)).join("")
-    + `<dialog id="overview-help-modal" class="overview-help-modal" aria-labelledby="overview-help-title">`
-    + `<div class="overview-help-modal-head"><h2 id="overview-help-title">Erläuterung</h2>`
-    + `<button class="overview-help-close" type="button" data-help-close aria-label="Erläuterung schließen">×</button></div>`
-    + `<p id="overview-help-body"></p></dialog>`;
+    + helpModalMarkup();
   bindDrilldowns(host);
   bindHelp(host);
 }
