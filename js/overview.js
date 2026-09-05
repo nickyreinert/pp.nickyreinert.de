@@ -41,6 +41,10 @@ const HELP_TEXT = Object.freeze({
     title: "Warum ist das Datenformat wichtig?",
     body: "Seit Plenarprotokoll 19/1 vom 24. Oktober 2017 stellt der Bundestag die offiziellen Einzel-XML im strukturierten dbtplenarprotokoll-Format bereit. Darin sind etwa Sprecherwechsel, Fraktionen und Kommentare als XML-Struktur angegeben. Das Projekt übernimmt solche Dateien direkt. Ältere oder archivierte Dateien im DOKUMENT/TEXT-Format werden weiterhin mit dem historischen Textparser verarbeitet — entscheidend ist der XML-Root, nicht allein die Wahlperiode.",
   },
+  coverage: {
+    title: "Was misst „Abdeckung“?",
+    body: "Der Anteil der inhaltlich relevanten Zeilen einer Protokolldatei (alle nicht-leeren Zeilen des Rohtexts), den die Verarbeitung einem Redebeitrag oder Zwischenruf zuordnen konnte — plus Kopf-/Tagesordnungsbereich vor dem ersten Redebeitrag und Anlagen-/Anhangbereich nach dem letzten, aber nur wenn die Verarbeitung die Datei bis zu einem regulären Ende durchlaufen hat. Fehlende Zeilen sind echter Verlust und werden unten weiter aufgeschlüsselt: „Debattenlücke“ = eine Lücke mitten im Debattenteil, „Textendeverlust“ = Inhalt nach einem vorzeitigen Abbruch der Verarbeitung. 99,8 % Abdeckung heißt: im Schnitt 0,2 % der relevanten Zeilen je Datei sind nicht zugeordnet — nicht „0,2 % der Dateien fehlen“.",
+  },
 });
 
 function helpButton(key, label) {
@@ -66,8 +70,9 @@ function availability(block) {
   return `<span class="availability availability-${esc(status)}">${esc(labels[status] || status)}</span>${reason}`;
 }
 
-function metric(label, raw, { kind = "number", route = null, note = "" } = {}) {
-  const body = `<span class="metric-label">${esc(label)}</span><strong>${value(raw, kind)}</strong>`
+function metric(label, raw, { kind = "number", route = null, note = "", help = "" } = {}) {
+  const body = `<span class="metric-label">${esc(label)}${help ? helpButton(help, label) : ""}</span>`
+    + `<strong>${value(raw, kind)}</strong>`
     + (note ? `<small>${esc(note)}</small>` : "");
   if (!route) return `<div class="metric-card">${body}</div>`;
   const attrs = [
@@ -162,7 +167,7 @@ function overallScorecard(data, record, partyStats) {
           ${metric("verarbeitete Protokolldateien", general.sessions)}
           ${metric("fehlgeschlagene Sitzungen", general.failed_sessions)}
           ${metric("frühe Abbrüche", general.early_halts)}
-          ${metric("Abdeckung", coverage.overall, { kind: "percent" })}
+          ${metric("Abdeckung", coverage.overall, { kind: "percent", help: "coverage" })}
           ${metric("Median-Abdeckung", coverage.median, { kind: "percent" })}
           ${metric("niedrigste Datei-Abdeckung", coverage.minimum, { kind: "percent" })}
           ${metric("Dateien unter 95 %", coverage.files_below_95pct)}
@@ -210,7 +215,7 @@ function topicMetrics(topic, block, wp, partyStats) {
       return [
         metric("Sitzungen", block.sessions),
         metric("Redebeiträge", block.speeches, { route: route("speakers") }),
-        metric("Abdeckung", coverage.overall, { kind: "percent" }),
+        metric("Abdeckung", coverage.overall, { kind: "percent", help: "coverage" }),
         metric("fehlgeschlagene Sitzungen", block.failed_sessions),
         metric("frühe Abbrüche", block.early_halts),
         metric("Anomalie-Hinweise", anomaly.total, { route: route("reden", { mode: "unassigned" }) }),

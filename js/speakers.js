@@ -32,6 +32,19 @@ function normalizedState(value) {
   return STATE_VALUES.has(value) ? value : "";
 }
 
+// identity_type values from functions/person_index/identity_type.py.
+const IDENTITY_VALUES = new Set(["mdb", "bundesregierung", "bundesrat_land", "unverified"]);
+const IDENTITY_LABELS = {
+  mdb: "Abgeordnete:r (MdB)",
+  bundesregierung: "Bundesregierung",
+  bundesrat_land: "Bundesrat/Land",
+  unverified: "unverifiziert",
+};
+
+function normalizedIdentity(value) {
+  return IDENTITY_VALUES.has(value) ? value : "";
+}
+
 function routePage(value) {
   const page = Number(value);
   return Number.isInteger(page) && page >= 0 ? page : 0;
@@ -49,6 +62,7 @@ function speakerRouteOptions(id = (CURRENT && CURRENT.id) || "") {
     q: document.getElementById("search").value.trim(),
     wp: (document.getElementById("wp-filter") || {}).value || "",
     state: normalizedState((document.getElementById("state-filter") || {}).value || ""),
+    identity: normalizedIdentity((document.getElementById("identity-filter") || {}).value || ""),
     page: PAGE,
     xml: xmlSourceMode(),
   };
@@ -82,6 +96,8 @@ export function initSpeakers(speakers, meta) {
   document.getElementById("search").addEventListener("input", () => navigate({ id: "", page: "" }, true));
   const st = document.getElementById("state-filter");
   if (st) st.addEventListener("change", () => navigate({ id: "", page: "" }, true));
+  const idf = document.getElementById("identity-filter");
+  if (idf) idf.addEventListener("change", () => navigate({ id: "", page: "" }, true));
   const wp = document.getElementById("wp-filter");
   if (wp) { fillWpFilter(wp); wp.addEventListener("change", () => navigate({ id: "", page: "" }, true)); }
   const xml = document.getElementById("xml-source");
@@ -119,14 +135,17 @@ export function routeSpeakers(route) {
   const q = route.params.get("q") || "";
   const wp = route.params.get("wp") || "";
   const state = normalizedState(route.params.get("state") || "");
+  const identity = normalizedIdentity(route.params.get("identity") || "");
   const xml = normalizeXmlSource(route.params.get("xml"));
   const search = document.getElementById("search");
   const wpSel = document.getElementById("wp-filter");
   const stSel = document.getElementById("state-filter");
+  const idSel = document.getElementById("identity-filter");
   const xmlSel = document.getElementById("xml-source");
   if (search && search.value !== q) search.value = q;
   if (wpSel && wpSel.value !== wp) wpSel.value = wp;
   if (stSel && stSel.value !== state) stSel.value = state;
+  if (idSel && idSel.value !== identity) idSel.value = identity;
   if (xmlSel && xmlSel.value !== xml) xmlSel.value = xml;
   if (canonicalizeRoute(route, state, xml)) return;
 
@@ -155,9 +174,11 @@ function fillWpFilter(sel) {
 function filtered() {
   const q = document.getElementById("search").value.trim().toLowerCase();
   const state = (document.getElementById("state-filter") || {}).value || "";
+  const identity = (document.getElementById("identity-filter") || {}).value || "";
   const wp = (document.getElementById("wp-filter") || {}).value || "";
   return ALL.filter((s) => {
     if (state && (s.state || "review") !== state) return false;
+    if (identity && s.identity_type !== identity) return false;
     if (wp && !(s.periods || []).includes(wp)) return false;
     if (!q) return true;
     const hay = s.raw + " " + (s.name || "") + " " + s.parties.join(" ")
@@ -244,19 +265,30 @@ function showDetail(s) {
     ? `<h4>Namensvarianten (${variants.length})</h4>`
       + `<div class="variants">${variants.map((v) => esc(v)).join("<br>")}</div>`
     : "";
-  // Available regardless of state: a garbage string can coincidentally
-  // string-match a real surname and sit in "identified" with a wrong
-  // person_id, not just in "review"/"missing".
-  const notAPersonBtn = `<button id="copy-not-a-person" type="button">Keine Person: Edge-Case-Paket kopieren</button>`;
+  // "Keine Person" comes first and is available regardless of state: a
+  // garbage string can coincidentally string-match a real surname and sit
+  // in "identified" with a wrong person_id, not just in "review"/"missing".
+  // It is the high-confidence, no-research action (one click, unambiguous);
+  // "Identität recherchieren" is the opposite in kind - it says "this IS a
+  // real person" and asks for research with an uncertain outcome, so the
+  // two are labeled and explained separately rather than as two flavors of
+  // one "fix packet" request.
   const d = document.getElementById("detail");
+  const identityLabel = s.identity_type ? ` | ${IDENTITY_LABELS[s.identity_type] || s.identity_type}` : "";
   d.innerHTML = `<h3>${esc(s.raw)}</h3>`
-    + `<p class="muted">person_id: ${s.person_id || "(unaufgeloest)"}`
+    + `<p class="muted">person_id: ${s.person_id || "(unaufgeloest)"}${identityLabel}`
     + ` | ${speechKindSummary(s)} | WP ${s.periods.join(", ")} | ${esc(s.parties.join(", ")) || "-"}</p>`
     + variantsHtml
     + `<h4>Quellen</h4>${srcs}`
-    + `<button id="copy-fixpacket" type="button">Fix-Paket kopieren</button>`
-    + notAPersonBtn
-    + `<p class="muted">Ins Agenten-Fenster einfuegen; die Anleitung steht in docs/MANUAL_FIXES.md.</p>`;
+    + `<div class="fixpacket-action">`
+    + `<button id="copy-not-a-person" type="button">Keine Person</button>`
+    + `<p class="muted">Eindeutig: Organisation, Zitat oder Textfragment - keine echte Person. `
+    + `Ein Klick, keine Recherche noetig; verhindert, dass der Eintrag wieder auftaucht.</p></div>`
+    + `<div class="fixpacket-action">`
+    + `<button id="copy-fixpacket" type="button">Identität recherchieren</button>`
+    + `<p class="muted">Das ist eine echte Person, aber wir wissen nicht sicher, wer. `
+    + `Startet eine Recherche-Anfrage (docs/MANUAL_FIXES.md) - bei alten, kaum belegten Fällen `
+    + `bleibt sie moeglicherweise ohne Ergebnis.</p></div>`;
   const packetSource = {
     ...s,
     sources_sampled: true,
