@@ -261,9 +261,21 @@ function showDetail(s) {
     return `<div class="src">${esc(src.file)}:${src.line} ${pdf} ${xml}</div>`;
   }).join("");
   const variants = (s.variants || []).filter((v) => v !== s.raw);
+  // A resolved speaker can carry a wrongly merged raw string (two real people
+  // clustered into one identity, or garbage string-matched in). Each variant is
+  // a click target that emits a correction packet naming that exact raw - the
+  // raw string is the key rulesets/person_overrides.json needs, so naming it
+  // precisely removes the guesswork. Unresolved groups have no person_id to
+  // detach from; there the two buttons below already cover the case.
+  const flagVariants = Boolean(s.person_id) && variants.length > 0;
   const variantsHtml = variants.length
     ? `<h4>Namensvarianten (${variants.length})</h4>`
-      + `<div class="variants">${variants.map((v) => esc(v)).join("<br>")}</div>`
+      + (flagVariants
+        ? `<p class="muted">Variante anklicken, die nicht zu dieser Person gehoert - `
+          + `erzeugt eine Korrektur-Anfrage (docs/MANUAL_FIXES.md).</p>`
+          + `<div class="variants">${variants.map((v) =>
+              `<button type="button" class="variant-flag">${esc(v)}</button>`).join("")}</div>`
+        : `<div class="variants">${variants.map((v) => esc(v)).join("<br>")}</div>`)
     : "";
   // "Keine Person" comes first and is available regardless of state: a
   // garbage string can coincidentally string-match a real surname and sit
@@ -303,6 +315,17 @@ function showDetail(s) {
       copyFixPacket("speaker_not_a_person", packetSource, e.currentTarget);
     });
   }
+  // Buttons render in variants order, so the node index selects the raw string.
+  d.querySelectorAll(".variant-flag").forEach((btn, i) => {
+    btn.addEventListener("click", (e) => {
+      const flagged = variants[i];
+      copyFixPacket("speaker_wrong_variant", {
+        ...packetSource,
+        flagged_variant: flagged,
+        entity_id: `speaker_wrong_variant:${s.person_id}|${flagged}`,
+      }, e.currentTarget);
+    });
+  });
 }
 
 function clearDetail() {

@@ -81,6 +81,28 @@ function speakerBody(s) {
   );
 }
 
+function wrongVariantBody(s) {
+  const others = (s.variants || []).filter((v) => v !== s.flagged_variant);
+  return (
+    `kind: speaker_wrong_variant\n` +
+    `entity_id: ${s.entity_id}\n` +
+    `person_id: ${s.person_id || "(unresolved)"}\n` +
+    `canonical: ${s.name || s.raw}\n` +
+    `identity type: ${s.identity_type || "-"}\n` +
+    `flagged variant: ${s.flagged_variant}\n` +
+    `  reporter: this exact raw speaker string is merged into the person above\n` +
+    `  but does NOT belong there. Decide where the flagged raw really belongs.\n` +
+    `other variants (believed correct, do not touch): ${others.join(" | ") || "-"}\n` +
+    `group periods: ${(s.periods || []).join(", ") || "-"}\n` +
+    `group parties: ${(s.parties || []).join(", ") || "-"}\n` +
+    `speeches (whole merged group): ${s.count}\n` +
+    `candidates:\n${candidateLines(s.candidates)}\n` +
+    `sources (whole merged identity, NOT the flagged raw alone - grep the corpus\n` +
+    `  for the exact flagged string to see its own occurrences and periods):\n` +
+    `${sourceLines(s.sources, s)}`
+  );
+}
+
 function notAPersonBody(s) {
   return (
     `kind: not_a_person\n` +
@@ -126,6 +148,7 @@ const BUILDERS = {
   speaker: speakerBody,
   unresolved_group: groupBody,
   speaker_not_a_person: notAPersonBody,
+  speaker_wrong_variant: wrongVariantBody,
 };
 
 // --- PUBLIC ---
