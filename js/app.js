@@ -10,6 +10,7 @@ import {
 import { updateFehlliste, routeFehlliste } from "./absence.js";
 import { initSelection } from "./selection.js";
 import { initRouter, register } from "./router.js";
+import { initSettings } from "./settings.js";
 
 let META = null;
 let SPEAKERS_READY = false;
@@ -104,3 +105,4 @@ async function boot() {
 }
 
 void boot();
+initSettings();
