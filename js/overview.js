@@ -351,21 +351,96 @@ function dataModel() {
   </section>`;
 }
 
-// Static, documentation-derived summary (see docs/edge_cases.md, docs/data_edge_cases.md, docs/accepted_losses.md).
-function edgeCaseNotes() {
+// --- INPUT-STRUCTURE EDGE CASES (data-driven from anomalies.json) ---
+
+// The anomaly categories that describe the shape of the source files, in
+// display order. Each carries the marker its split output files get and a
+// one-line reading; counts and file lists come live from the last build.
+const INPUT_STRUCTURE_CATEGORIES = [
+  ["multi_session_split", "Mehrere Sitzungen in einer Quelldatei",
+    "Eine Quell-XML enthält mehrere Sitzungen. Am Schlussmarker automatisch getrennt; jede Teildatei trägt den Zusatz <code>_session&lt;NN&gt;</code>."],
+  ["multi_day_split", "Sitzung über zwei Kalendertage",
+    "Eine Sitzung läuft über Mitternacht. In zwei Teildateien mit dem Zusatz <code>_day&lt;N&gt;</code> getrennt, gemeinsame Sitzungsnummer."],
+  ["appendix_heavy", "Anlagenlastige Sitzungen",
+    "Wenig gesprochener Text, aber lange Datei: überwiegend schriftliche Erklärungen und namentliche Abstimmungslisten."],
+  ["very_short", "Sehr kurze Sitzungen",
+    "Höchstens drei Redebeiträge in einer kurzen Datei — echte Kurzsitzungen (Gedenkstunde, Eröffnung), kein Datenfehler."],
+];
+
+// "01020_session20.json" -> "WP1 · Sitzung 20"; "01007_day1.json" ->
+// "WP1 · Sitzung 7 · Tag 1"; "05047.json" -> "WP5 · Sitzung 47".
+function sessionFileLabel(file) {
+  const stem = String(file || "").replace(/\.json$/, "");
+  const wp = String(parseInt(stem.slice(0, 2), 10) || stem.slice(0, 2));
+  const session = stem.match(/_session(\d+)/);
+  if (session) return `WP${wp} · Sitzung ${parseInt(session[1], 10)}`;
+  const day = stem.match(/^\d{2}(\d+)_day(\d+)$/);
+  if (day) return `WP${wp} · Sitzung ${parseInt(day[1], 10)} · Tag ${day[2]}`;
+  return `WP${wp} · Sitzung ${parseInt(stem.slice(2), 10)}`;
+}
+
+function edgeCaseDetails(summary, rowsHtml) {
+  return `<details class="edge-case-detail"><summary>${esc(summary)}</summary>`
+    + `<ul class="edge-case-filelist">${rowsHtml}</ul></details>`;
+}
+
+// One <li> per structural anomaly category present in the build, plus the
+// reconcile-step dedup ledger, each with a collapsed file/session list.
+function inputStructureItems(anomalies) {
+  const data = anomalies || {};
+  const items = INPUT_STRUCTURE_CATEGORIES
+    .filter(([key]) => Array.isArray(data[key]) && data[key].length)
+    .map(([key, label, reading]) => {
+      const files = data[key];
+      const rows = files
+        .map((entry) => `<li>${esc(sessionFileLabel(entry.file))} · ${number(entry.speeches)} Redebeiträge</li>`)
+        .join("");
+      return `<li><strong>${esc(label)}</strong> (${number(files.length)} Dateien) — ${reading}`
+        + edgeCaseDetails("Dateien anzeigen", rows) + "</li>";
+    });
+
+  const dedup = data._reconciled_duplicates;
+  if (dedup && Array.isArray(dedup.pairs) && dedup.pairs.length) {
+    const wps = [...new Set(dedup.pairs.map((pair) => String(pair.session).split("/")[0]))]
+      .map(Number).sort((a, b) => a - b);
+    const era = wps.length ? `WP${wps[0]}–${wps[wps.length - 1]}` : "frühe Wahlperioden";
+    const rows = dedup.pairs
+      .map((pair) => `<li>Sitzung ${esc(pair.session)}: <code>${esc(pair.kept)}</code> behalten, `
+        + `<code>${esc(pair.dropped)}</code> entfernt (${number(pair.dropped_speeches)} Redebeiträge)</li>`)
+      .join("");
+    items.push("<li><strong>Dieselbe Sitzung in zwei aufeinanderfolgenden Quelldateien</strong> "
+      + `(${number(dedup.pairs.length)} Sitzungen, ${esc(era)}) — ein korrigierter OCR-Nachdruck unter der `
+      + "nächsten Dateinummer. Der Abgleichschritt behält je Sitzung eine kanonische Kopie und entfernt die "
+      + "zweite; die entfernten Kopien bleiben im Repo gesichert. Keine Doppelzählung mehr."
+      + edgeCaseDetails("Paare anzeigen", rows) + "</li>");
+  }
+  return items.join("");
+}
+
+function inputStructureGroup(anomalies) {
+  const known = anomalies && Object.keys(anomalies).length;
+  if (!known) {
+    return `<div><h3>Struktur der Eingabedateien</h3>`
+      + `<ul><li class="muted">Detailbericht nicht verfügbar (anomalies.json fehlt im Build).</li></ul></div>`;
+  }
+  const items = inputStructureItems(anomalies)
+    || "<li>Keine strukturellen Grenzfälle im aktuellen Build.</li>";
+  return `<div><h3>Struktur der Eingabedateien</h3>`
+    + `<p class="edge-case-lead">Jede Sitzung wird über <strong>Wahlperiode und Sitzungsnummer</strong> `
+    + `identifiziert (z. B. 19/1). Weicht eine Quelldatei davon ab, trägt die abgeleitete Datei einen `
+    + `sichtbaren Zusatz — <code>_session&lt;NN&gt;</code> oder <code>_day&lt;N&gt;</code> — oder sie wird `
+    + `beim Abgleich mit ihrer Doppelung zusammengeführt. Zahlen und Listen unten stammen aus dem letzten Build.</p>`
+    + `<ul>${items}</ul></div>`;
+}
+
+// The structural group is data-driven (see above); the remaining groups stay a
+// documentation-derived summary (docs/edge_cases.md, docs/data_edge_cases.md,
+// docs/accepted_losses.md).
+function edgeCaseNotes(anomalies) {
   return `<section class="overview-about overview-edge-cases" aria-labelledby="overview-edge-cases-title">
     <h2 id="overview-edge-cases-title">Bekannte Fehlerquellen und Grenzfälle</h2>
     <div class="edge-case-groups">
-      <div>
-        <h3>Struktur der Eingabedateien</h3>
-        <ul>
-          <li>Mehrere Sitzungen in einer Datei (49 Dateien) — automatisch getrennt, unkritisch.</li>
-          <li>Sitzung über zwei Kalendertage (8 Dateien) — automatisch getrennt, unkritisch.</li>
-          <li>Dieselbe Sitzung in zwei aufeinanderfolgenden Eingabedateien (48 Fälle, WP1–5) — ca. 1.878 doppelt gezählte Reden (~0,2 %), keine automatische Bereinigung.</li>
-          <li>Anlagenlastige Sitzungen (155 Dateien) — wenig gesprochener Text, viele Anlagen/Abstimmungslisten.</li>
-          <li>Sehr kurze Sitzungen (27 Dateien) — echte kurze Sitzungen, kein Datenfehler.</li>
-        </ul>
-      </div>
+      ${inputStructureGroup(anomalies)}
       <div>
         <h3>Statistische Ausreißer</h3>
         <ul>
@@ -378,7 +453,6 @@ function edgeCaseNotes() {
         <h3>Einzelfälle in der Quelle</h3>
         <ul>
           <li>WP17, Sitzung 250: Quelle dupliziert Eröffnung und Redetext selbst — Zahlen dieser Sitzung sind überhöht, kein Parserfehler.</li>
-          <li>WP4, Datei 04087: zwei Sitzungen (87 und 88) in einer Ausgabedatei zusammengefasst — Sitzungszahl hier untererfasst.</li>
           <li>Fehlliste-Spaltenumbruch (WP14, Sitzung 88): ein Eintrag nicht rekonstruierbar.</li>
           <li>Sitzungsendzeit fehlt (ca. 330 Dateien) — reine Feldlücke, kein Redeverlust.</li>
         </ul>
@@ -526,7 +600,7 @@ export function renderOverview(data, partyStats = null) {
     + heroNumbers(data)
     + nomenclature()
     + dataModel()
-    + edgeCaseNotes()
+    + edgeCaseNotes(data.anomalies)
     + chart(data)
     + helpModalMarkup();
   bindDrilldowns(host);

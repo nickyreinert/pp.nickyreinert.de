@@ -1,4 +1,4 @@
-import { refUrl, xmlFileLink, xmlLink } from "./data.js";
+import { refUrl, xmlLink } from "./data.js";
 import { copyFixPacket } from "./fixpacket.js";
 import { setRoute } from "./router.js";
 import {
@@ -101,7 +101,7 @@ function pollsFiltered() {
 
 function pollSource(source) {
   const pdf = refUrl(source.file);
-  const xml = source.xml_line ? xmlLink(source) : xmlFileLink(source.file);
+  const xml = source.xml_line ? xmlLink(source) : null;
   return `${pdf ? `<a href="${esc(pdf + (source.page ? `#page=${source.page}` : ""))}" target="_blank" rel="noopener">PDF${source.page ? ` S.${esc(source.page)}` : ""}</a>` : ""}`
     + `${xml ? ` <a href="${esc(xml.href)}" target="_blank" rel="noopener">${esc(xml.text)}</a>` : ""}`;
 }
@@ -330,7 +330,7 @@ function typeChips() {
 
 function sampleHtml(sample) {
   const pdf = refUrl(sample.file);
-  const xml = sample.xml_line ? xmlLink(sample) : xmlFileLink(sample.file);
+  const xml = sample.xml_line ? xmlLink(sample) : null;
   return `<article class="ij-sample"><div class="ij-sample-raw">${esc(sample.raw || sample.text || "")}</div>`
     + `<div class="sub"><span class="badge cat-furniture">${esc(sample.type || sample.kind || "")}</span> WP ${esc(sample.period)}${sample.session ? `/${esc(sample.session)}` : ""}`
     + `${sample.target ? ` · an ${esc(sample.target)}` : ""}`

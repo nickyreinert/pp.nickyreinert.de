@@ -211,11 +211,14 @@ async function buildLegacyOverview() {
 // current checked-out data still renders a conservative, aggregate fallback.
 export async function loadOverviewData() {
   await loadMeta();
+  // Raw per-file anomaly lists drive the expandable "Struktur der Eingabedateien"
+  // notes on the overview; the quality summary only carries the counts.
+  const anomalies = await fetchJson("data/anomalies.json", { optional: true }) || {};
   for (const path of ["data/overview.json", "data/quality_summary.json"]) {
     const value = await fetchJson(path, { optional: true });
-    if (value && typeof value === "object") return { ...value, source: path };
+    if (value && typeof value === "object") return { ...value, anomalies, source: path };
   }
-  return buildLegacyOverview();
+  return { ...(await buildLegacyOverview()), anomalies };
 }
 
 // The party view only needs the compact statistics aggregate, not the much
@@ -555,51 +558,54 @@ export async function loadTopicExtra(topic, file) {
 }
 
 // Official Bundestag PDF for a source file like "input/pp16/16232.xml".
-// Pattern: https://dserver.bundestag.de/btp/{period}/{stem}.pdf
+// Pattern: https://dserver.bundestag.de/btp/{PP}/{PPSSS}.pdf - the period
+// segment stays two digits ("btp/04/04069.pdf"); an unpadded "btp/4/" 404s.
 export function refUrl(file) {
   if (!file) return null;
   const stem = file.split("/").pop().replace(/\.xml$/, "");
   const match = stem.match(/^(\d{2})(\d{3})/);
   if (!match) return null;
-  const period = parseInt(match[1], 10);
-  return `https://dserver.bundestag.de/btp/${period}/${match[1]}${match[2]}.pdf`;
+  return `https://dserver.bundestag.de/btp/${match[1]}/${match[1]}${match[2]}.pdf`;
 }
 
-// Edit to point GitHub-hosted XML at your repo (blob view + #L line anchor).
-export const XML_GITHUB_BASE = "https://github.com/nickyreinert/plenarProtokolle/blob/main/";
-
-// Source-link modes are part of the speaker deep-link contract. Keep the
-// normalization here so callers never emit an unsafe or non-functional target.
-export const XML_SOURCE_MODES = Object.freeze(["vscode", "github", "pdf"]);
+// Source-link modes. "pdf" is the public default. "vscode" jumps to the exact
+// XML row in a local editor - only useful to a maintainer with a checkout, and
+// only if they set localStorage["xml_checkout_root"] once (see xmlCheckoutRoot).
+// The input XML tree is ~2 GB and gitignored, so there is no GitHub blob to
+// link and no absolute path is shipped in web/data.
+export const XML_SOURCE_MODES = Object.freeze(["pdf", "vscode"]);
 
 export function normalizeXmlSource(value) {
   const mode = String(value || "").trim().toLowerCase();
-  return XML_SOURCE_MODES.includes(mode) ? mode : "vscode";
+  return XML_SOURCE_MODES.includes(mode) ? mode : "pdf";
 }
 
-// Deep link to a source XML row; target chosen by the #xml-source select:
-// local VS Code at the exact line, GitHub blob with #L anchor, or the PDF page.
-// `preferredMode` lets a route render deterministically without depending on a
-// mutable control elsewhere in the document. The DOM fallback keeps legacy
-// callers working.
+// Local checkout root for "vscode" mode, set once per browser by the maintainer
+// in the console:  localStorage.xml_checkout_root = "/abs/path/to/plenarProtokolle"
+// Absent (every normal visitor) -> "vscode" mode falls back to the PDF link.
+function xmlCheckoutRoot() {
+  try {
+    return (localStorage.getItem("xml_checkout_root") || "").replace(/\/+$/, "");
+  } catch (e) {
+    return "";
+  }
+}
+
+// Deep link to a source location. In "vscode" mode with a configured checkout
+// root, links to the exact XML row in a local editor; otherwise the official
+// PDF page. `preferredMode` lets a route render deterministically without
+// reading the mutable #xml-source select.
 export function xmlLink(src, preferredMode = null) {
   if (!src) return null;
   const selected = preferredMode == null
-    ? (typeof document === "undefined" ? "vscode" : (document.getElementById("xml-source") || {}).value)
+    ? (typeof document === "undefined" ? "pdf" : (document.getElementById("xml-source") || {}).value)
     : preferredMode;
   const mode = normalizeXmlSource(selected);
-  if (mode === "vscode" && src.xml_path && src.xml_line)
-    return { href: `vscode://file${src.xml_path}:${src.xml_line}`, text: `XML:${src.xml_line}` };
-  if (mode === "github" && src.file && src.xml_line)
-    return { href: `${XML_GITHUB_BASE}${src.file}#L${src.xml_line}`, text: `GitHub:${src.xml_line}` };
+  const root = xmlCheckoutRoot();
+  if (mode === "vscode" && root && src.file && src.xml_line)
+    return { href: `vscode://file${root}/${src.file}:${src.xml_line}`, text: `XML:${src.xml_line}` };
   const base = refUrl(src.file);
   return base ? { href: base + (src.page ? `#page=${src.page}` : ""), text: `PDF${src.page ? ` S.${src.page}` : ""}` } : null;
-}
-
-// File-level XML link (no row reference) for items that lack a line, e.g. polls.
-export function xmlFileLink(file) {
-  if (!file) return null;
-  return { href: `${XML_GITHUB_BASE}${file}`, text: "XML" };
 }
 
 function interjectionShardPeople(payload) {

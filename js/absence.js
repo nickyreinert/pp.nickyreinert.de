@@ -1,4 +1,4 @@
-import { refUrl, xmlFileLink, xmlLink } from "./data.js";
+import { refUrl, xmlLink } from "./data.js";
 import { copyFixPacket } from "./fixpacket.js";
 import { setRoute } from "./router.js";
 import {
@@ -172,7 +172,7 @@ function sessionsFiltered() {
 
 function sourceHtml(source) {
   const pdf = refUrl(source.file);
-  const xml = source.xml_line ? xmlLink(source) : xmlFileLink(source.file);
+  const xml = source.xml_line ? xmlLink(source) : null;
   return `<span class="src">${esc(source.file || "Quelle unbekannt")}`
     + `${pdf ? ` <a href="${esc(pdf + (source.page ? `#page=${source.page}` : ""))}" target="_blank" rel="noopener">PDF${source.page ? ` S.${esc(source.page)}` : ""}</a>` : ""}`
     + `${xml ? ` <a href="${esc(xml.href)}" target="_blank" rel="noopener">${esc(xml.text)}</a>` : ""}</span>`;

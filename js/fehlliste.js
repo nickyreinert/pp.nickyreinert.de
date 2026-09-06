@@ -2,7 +2,7 @@
 // absenteeism leaderboard, with PDF/XML source links per session.
 // Built from output_structured/ fehlliste via build_webdata.
 
-import { refUrl, xmlLink, xmlFileLink } from "./data.js";
+import { refUrl, xmlLink } from "./data.js";
 
 let SESSIONS = [];
 let PEOPLE = [];
@@ -85,7 +85,7 @@ function showSession(s) {
   const host = document.getElementById("fl-session-detail");
   const u = refUrl(s.file);
   const pdf = u ? `<a href="${esc(u + (s.page ? `#page=${s.page}` : ""))}" target="_blank" rel="noopener">PDF${s.page ? ` S.${s.page}` : ""}</a>` : "";
-  const x = s.xml_line ? xmlLink(s) : (s.file ? xmlFileLink(s.file) : null);
+  const x = s.xml_line ? xmlLink(s) : null;
   const xml = x ? `<a href="${esc(x.href)}" target="_blank" rel="noopener">${esc(x.text)}</a>` : "";
   const members = (s.members || []).map((m) =>
     `<div class="ij-sample"><div class="ij-sample-raw">${esc(m.name)}</div>`

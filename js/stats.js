@@ -1,5 +1,5 @@
 import { vertBarChart, histogram, sessionScatter } from "./charts.js";
-import { refUrl, xmlFileLink } from "./data.js";
+import { refUrl } from "./data.js";
 
 function median(sorted) {
   if (!sorted.length) return 0;
@@ -96,11 +96,8 @@ function anomalyOverview(anomalies) {
       const session = parseInt(stem.slice(2), 10);
       const file = sessionFile(period, session);
       const pdfHref = refUrl(file);
-      const xmlRef = xmlFileLink(file);
-      const links = [
-        pdfHref ? `<a href="${pdfHref}" target="_blank" style="color:#2a6">PDF</a>` : "",
-        xmlRef ? `<a href="${xmlRef.href}" target="_blank" style="color:#2a6">XML</a>` : "",
-      ].filter(Boolean).join(" ");
+      const links = pdfHref
+        ? `<a href="${pdfHref}" target="_blank" style="color:#2a6">PDF</a>` : "";
       return `<tr>`
         + `<td>${stem.slice(0, 2)}</td><td>${session || "—"}</td>`
         + `<td>${d.speeches != null ? d.speeches : "—"}</td>`
@@ -174,11 +171,8 @@ function edgeCasesSection(sessions, anomalies) {
     const trs = rows.map((r) => {
       const file = sessionFile(r.period, r.session);
       const pdfHref = refUrl(file);
-      const xmlRef = xmlFileLink(file);
-      const links = [
-        pdfHref ? `<a href="${pdfHref}" target="_blank" style="color:#2a6">PDF</a>` : "",
-        xmlRef ? `<a href="${xmlRef.href}" target="_blank" style="color:#2a6">XML</a>` : "",
-      ].filter(Boolean).join(" ");
+      const links = pdfHref
+        ? `<a href="${pdfHref}" target="_blank" style="color:#2a6">PDF</a>` : "";
       return `<tr${cls ? ` class="${cls}"` : ""}>`
         + `<td>WP${r.period}</td><td>${r.session}</td>`
         + `<td class="td-left">${r.date || "—"}</td>`

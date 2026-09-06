@@ -2,7 +2,7 @@
 // (Typen, Personen, Fraktionen, meist unterbrochene Redner).
 // Built from output_structured/ via build_webdata + normalize_interjections.
 
-import { refUrl, xmlLink, xmlFileLink } from "./data.js";
+import { refUrl, xmlLink } from "./data.js";
 import { isSelected, toggle } from "./selection.js";
 import { setRoute } from "./router.js";
 
@@ -126,7 +126,7 @@ function pollPdf(p) {
 }
 
 function pollXml(p) {
-  return p.xml_line ? xmlLink(p) : xmlFileLink(p.file);
+  return p.xml_line ? xmlLink(p) : null;
 }
 
 function pollHtml(p) {
@@ -218,7 +218,7 @@ function showPerson(i) {
 function sampleHtml(s) {
   const u = refUrl(s.file);
   const pdf = u ? ` <a href="${esc(u + (s.page ? `#page=${s.page}` : ""))}" target="_blank" rel="noopener">PDF${s.page ? ` S.${s.page}` : ""}</a>` : "";
-  const x = s.xml_line ? xmlLink(s) : (s.file ? xmlFileLink(s.file) : null);
+  const x = s.xml_line ? xmlLink(s) : null;
   const xml = x ? ` <a href="${esc(x.href)}" target="_blank" rel="noopener">${esc(x.text)}</a>` : "";
   const where = `WP${s.period}${s.session ? `/${s.session}` : ""}`;
   const target = s.target ? ` an ${esc(s.target)}` : "";

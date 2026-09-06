@@ -297,6 +297,13 @@ nav button.active { background: #6c8cb0; }
 .edge-case-groups h3 { margin: 0 0 5px; font-size: 13px; color: #294966; }
 .edge-case-groups ul { margin: 0 0 4px; padding-left: 18px; }
 .edge-case-groups li { margin: 0 0 4px; font-size: 12.5px; line-height: 1.4; }
+.edge-case-lead { margin: 0 0 8px; font-size: 12px; line-height: 1.5; color: #4a4a4a; }
+.edge-case-lead code, .edge-case-groups li code { font-size: 11px; background: #eef1f4; padding: 0 3px; border-radius: 3px; }
+.edge-case-detail { margin: 3px 0 2px; }
+.edge-case-detail > summary { cursor: pointer; font-size: 11.5px; color: #2a6b46; }
+.edge-case-filelist { list-style: none; margin: 5px 0 0; padding: 6px 8px; max-height: 170px;
+  overflow-y: auto; background: #f6f8fa; border: 1px solid #e5e9ee; border-radius: 4px; }
+.edge-case-filelist li { margin: 0 0 2px; font-size: 11.5px; line-height: 1.35; }
 .overview-glossary dl { display: grid; grid-template-columns: minmax(140px, 220px) 1fr; gap: 6px 14px; margin: 0; }
 .overview-glossary dt { font-weight: 600; color: #294966; font-size: 13px; }
 .overview-glossary dd { margin: 0; font-size: 12.5px; line-height: 1.5; color: #333; }
