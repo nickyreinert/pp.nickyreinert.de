@@ -1,5 +1,6 @@
 import { setRoute } from "./router.js";
 import { esc, number } from "./tabutils.js";
+import { refUrl } from "./data.js";
 
 const TOPICS = ["general", "speakers", "speeches", "toc", "polls", "interjections", "fehlliste"];
 
@@ -433,6 +434,12 @@ function inputStructureGroup(anomalies) {
     + `<ul>${items}</ul></div>`;
 }
 
+function brokenSessionLink(stem, period, session) {
+  const url = refUrl(stem);
+  const label = `WP${period}, Sitzung ${session}`;
+  return url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(label)}</a>` : esc(label);
+}
+
 // The structural group is data-driven (see above); the remaining groups stay a
 // documentation-derived summary (docs/edge_cases.md, docs/data_edge_cases.md,
 // docs/accepted_losses.md).
@@ -453,8 +460,13 @@ function edgeCaseNotes(anomalies) {
         <h3>Einzelfälle in der Quelle</h3>
         <ul>
           <li>WP17, Sitzung 250: Quelle dupliziert Eröffnung und Redetext selbst — Zahlen dieser Sitzung sind überhöht, kein Parserfehler.</li>
+          <li>WP20, Sitzung 147 (18.01.2024): als XML gibt es nur den vorläufigen Stenografischen Bericht. Er endet nach dem Aufruf von Michael Kruse (FDP); die Sitzung dauerte bis 23:31 Uhr — der Rest fehlt im Korpus.</li>
           <li>Fehlliste-Spaltenumbruch (WP14, Sitzung 88): ein Eintrag nicht rekonstruierbar.</li>
           <li>Sitzungsendzeit fehlt (ca. 330 Dateien) — reine Feldlücke, kein Redeverlust.</li>
+          <li>${brokenSessionLink("13041", "13", "41")}: Namentliche-Abstimmung-Trigger schlägt fehl, vom WP3-13-Regelwerk-Fix nicht erfasst — noch ungeklärt.</li>
+          <li>${brokenSessionLink("05206", "5", "206")}: Namentliche-Abstimmung-Trigger schlägt fehl, vom WP3-13-Regelwerk-Fix nicht erfasst — noch ungeklärt.</li>
+          <li>${brokenSessionLink("12203", "12", "203")}: Namentliche-Abstimmung-Trigger schlägt fehl, vom WP3-13-Regelwerk-Fix nicht erfasst — noch ungeklärt.</li>
+          <li>${brokenSessionLink("15036", "15", "36")}: Ein Satz des Sitzungsleiters umbricht optisch identisch zur echten Anlagen-Überschrift und wird fälschlich als solche erkannt.</li>
         </ul>
       </div>
       <div>
