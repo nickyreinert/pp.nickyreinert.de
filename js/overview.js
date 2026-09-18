@@ -1,6 +1,5 @@
 import { setRoute } from "./router.js";
 import { esc, number } from "./tabutils.js";
-import { refUrl } from "./data.js";
 
 const TOPICS = ["general", "speakers", "speeches", "toc", "polls", "interjections", "fehlliste"];
 
@@ -434,10 +433,26 @@ function inputStructureGroup(anomalies) {
     + `<ul>${items}</ul></div>`;
 }
 
-function brokenSessionLink(stem, period, session) {
-  const url = refUrl(stem);
-  const label = `WP${period}, Sitzung ${session}`;
-  return url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(label)}</a>` : esc(label);
+// Statistical counts use the same build report as the structural categories.
+export function statisticalOutlierGroup(anomalies) {
+  const labels = {
+    high_unassigned: "Hoher Anteil unzugeordneter Zeilen",
+    low_resolution: "Niedrige Sprecher:innen-Auflösungsrate",
+    low_coverage: "Geringe Textabdeckung",
+    duration_discrepancy: "Abweichende Sitzungsdauer",
+  };
+  const items = Object.entries(labels).flatMap(([key, label]) => {
+    const files = anomalies && anomalies[key];
+    if (!Array.isArray(files) || !files.length) return [];
+    const rows = files.map((entry) => `<li>${esc(sessionFileLabel(entry.file))}</li>`).join("");
+    return [`<li>${esc(label)} (${number(files.length)} Dateien)`
+      + edgeCaseDetails("Dateien anzeigen", rows) + "</li>"];
+  });
+  const empty = anomalies == null
+    ? "Detailbericht nicht verfügbar."
+    : "Keine statistischen Ausreißer im aktuellen Build gemeldet.";
+  return `<div><h3>Statistische Ausreißer</h3><ul>${items.join("")
+    || `<li class="muted">${empty}</li>`}</ul></div>`;
 }
 
 // The structural group is data-driven (see above); the remaining groups stay a
@@ -448,14 +463,7 @@ function edgeCaseNotes(anomalies) {
     <h2 id="overview-edge-cases-title">Bekannte Fehlerquellen und Grenzfälle</h2>
     <div class="edge-case-groups">
       ${inputStructureGroup(anomalies)}
-      <div>
-        <h3>Statistische Ausreißer</h3>
-        <ul>
-          <li>Hoher Anteil unzugeordneter Zeilen (31 Dateien) — Kandidaten für Regelwerk-Korrekturen.</li>
-          <li>Niedrige Sprecher:innen-Auflösungsrate (42 Dateien, v. a. WP4–5) — noch offene Identitätsklärung.</li>
-          <li>WP14: rund 9.989 unzugeordnete Zeilen, gleichmäßig über alle 253 Dateien verteilt — systematische Ruleset-Lücke, kein Einzeldatei-Fehler.</li>
-        </ul>
-      </div>
+      ${statisticalOutlierGroup(anomalies)}
       <div>
         <h3>Einzelfälle in der Quelle</h3>
         <ul>
@@ -463,10 +471,6 @@ function edgeCaseNotes(anomalies) {
           <li>WP20, Sitzung 147 (18.01.2024): als XML gibt es nur den vorläufigen Stenografischen Bericht. Er endet nach dem Aufruf von Michael Kruse (FDP); die Sitzung dauerte bis 23:31 Uhr — der Rest fehlt im Korpus.</li>
           <li>Fehlliste-Spaltenumbruch (WP14, Sitzung 88): ein Eintrag nicht rekonstruierbar.</li>
           <li>Sitzungsendzeit fehlt (ca. 330 Dateien) — reine Feldlücke, kein Redeverlust.</li>
-          <li>${brokenSessionLink("13041", "13", "41")}: Namentliche-Abstimmung-Trigger schlägt fehl, vom WP3-13-Regelwerk-Fix nicht erfasst — noch ungeklärt.</li>
-          <li>${brokenSessionLink("05206", "5", "206")}: Namentliche-Abstimmung-Trigger schlägt fehl, vom WP3-13-Regelwerk-Fix nicht erfasst — noch ungeklärt.</li>
-          <li>${brokenSessionLink("12203", "12", "203")}: Namentliche-Abstimmung-Trigger schlägt fehl, vom WP3-13-Regelwerk-Fix nicht erfasst — noch ungeklärt.</li>
-          <li>${brokenSessionLink("15036", "15", "36")}: Ein Satz des Sitzungsleiters umbricht optisch identisch zur echten Anlagen-Überschrift und wird fälschlich als solche erkannt.</li>
         </ul>
       </div>
       <div>
