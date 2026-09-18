@@ -73,7 +73,12 @@ function documentedCount(record) {
 }
 
 function personId(person) {
-  return `person:${person.name}`;
+  return `person:${person.person_id || person.name}`;
+}
+
+function matchesPersonRoute(person, id) {
+  if (personId(person) === id || `person:${person.name}` === id) return true;
+  return (person.source_names || []).some((name) => `person:${name}` === id);
 }
 
 function sessionId(session) {
@@ -179,12 +184,14 @@ function sourceHtml(source) {
 }
 
 function personRow(person) {
-  const factions = (person.factions || []).join(" · ") || "keine Fraktion überliefert";
+  const factions = (person.parties || person.factions || []).join(" · ") || "keine Fraktion überliefert";
+  const sourceNames = (person.source_names || []).filter((name) => name !== person.name);
+  const sourceText = sourceNames.length ? " · überliefert als " + sourceNames.join(" · ") : "";
   const statuses = statusSummary(person.status_counts);
   const statusText = statuses ? " · " + esc(statuses) : "";
   return '<button class="row result-row" type="button" data-id="' + esc(personId(person)) + '">'
     + '<div><div class="nm">' + esc(person.name) + '</div><div class="sub">'
-    + esc(factions) + statusText + '</div></div>'
+    + esc(factions + sourceText) + statusText + '</div></div>'
     + '<span class="cnt">' + number(person.count) + '×</span></button>';
 }
 
@@ -197,8 +204,13 @@ function sessionRow(session) {
     + '<span aria-hidden="true">→</span></button>';
 }
 
+function memberMatchesPerson(member, person) {
+  if (person.person_id) return String(member?.person_id || "") === String(person.person_id);
+  return member?.name === person.name;
+}
+
 function sessionsForPerson(person) {
-  return SESSIONS.filter((session) => (session.members || []).some((member) => member.name === person.name));
+  return SESSIONS.filter((session) => (session.members || []).some((member) => memberMatchesPerson(member, person)));
 }
 
 function showPerson(person, route) {
@@ -209,7 +221,7 @@ function showPerson(person, route) {
   const related = pageSlice(
     sessions, route?.params.get("related_page"), RELATED_PAGE_SIZE);
   const sessionRows = related.rows.map((session) => {
-    const member = (session.members || []).find((item) => item.name === person.name);
+    const member = (session.members || []).find((item) => memberMatchesPerson(item, person));
     return '<li>WP ' + esc(session.period) + ' · Sitzung ' + esc(session.session)
       + ' · ' + statusBadge(member) + ' – ' + sourceHtml(session)
       + memberEvidence(member) + '</li>';
@@ -218,8 +230,10 @@ function showPerson(person, route) {
   host.innerHTML = '<h3>' + esc(person.name) + '</h3>'
     + '<p class="muted">' + documentedCount(person) + ' in Sitzungslisten'
     + statusText + '; kein Nachweis einer vollständigen Abwesenheitszahl.</p>'
-    + ((person.factions || []).length
-      ? '<p>Fraktion(en): ' + esc((person.factions || []).join(" · ")) + '</p>' : "")
+    + ((person.parties || person.factions || []).length
+      ? '<p>Fraktion(en): ' + esc((person.parties || person.factions || []).join(" · ")) + '</p>' : "")
+    + ((person.source_names || []).some((name) => name !== person.name)
+      ? '<p class="muted">Überlieferte Namensformen: ' + esc((person.source_names || []).join(" · ")) + '</p>' : "")
     + ((person.untils || []).length
       ? '<p>Datumsangaben: ' + esc((person.untils || []).join(" · ")) + '</p>' : "")
     + '<h4>Überlieferte Sitzungen</h4>'
@@ -251,12 +265,16 @@ function showSession(session) {
   const host = byId("fl-detail");
   const statuses = statusSummary(session.status_counts);
   const statusText = statuses ? " · " + esc(statuses) : "";
-  const members = (session.members || []).map((member) =>
-    '<li><strong>' + esc(member.name) + '</strong>'
-    + (member.faction ? ' · ' + esc(member.faction) : "")
+  const members = (session.members || []).map((member) => {
+    const canonical = member.person_name || member.name;
+    const printed = member.person_name && member.person_name !== member.name
+      ? ' <span class="muted">(überliefert als ' + esc(member.name) + ')</span>' : "";
+    const party = member.party || member.faction;
+    return '<li><strong>' + esc(canonical) + '</strong>' + printed
+    + (party ? ' · ' + esc(party) : "")
     + (member.until ? ' · bis ' + esc(member.until) : "")
-    + ' · ' + statusBadge(member) + memberEvidence(member) + '</li>'
-  ).join("") || "<li>Keine Namen überliefert.</li>";
+    + ' · ' + statusBadge(member) + memberEvidence(member) + '</li>';
+  }).join("") || "<li>Keine Namen überliefert.</li>";
   host.innerHTML = '<h3>WP ' + esc(session.period) + ' · Sitzung ' + esc(session.session) + '</h3>'
     + '<p class="muted">' + documentedCount(session) + statusText + '</p>'
     + '<p>' + sourceHtml(session) + '</p><h4>Überlieferte Namen</h4><ul>' + members + '</ul>'
@@ -293,8 +311,8 @@ function render(route) {
     navigate({ page: next });
     list.scrollTop = 0;
   });
-  const selected = route.id && rows.find((item) =>
-    (view === "people" ? personId(item) : sessionId(item)) === route.id);
+  const selected = route.id && rows.find((item) => view === "people"
+    ? matchesPersonRoute(item, route.id) : sessionId(item) === route.id);
   if (selected) {
     if (view === "people") showPerson(selected, route);
     else showSession(selected);

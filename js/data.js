@@ -369,6 +369,12 @@ function fehllistePersonSelection(id) {
   return match ? match[1] : null;
 }
 
+function findFehllistePerson(people, selection) {
+  return (people || []).find((person) => String(person.person_id || "") === selection)
+    || (people || []).find((person) => person.name === selection)
+    || (people || []).find((person) => (person.source_names || []).includes(selection));
+}
+
 function fehllisteSessionKey(session) {
   if (!session || session.period === undefined || session.session === undefined) return null;
   return padPeriod(session.period) + "/" + String(session.session);
@@ -445,7 +451,10 @@ async function loadFehllisteData(id) {
   const selectedPerson = fehllistePersonSelection(id);
   let periods = selectedSession ? [padPeriod(selectedSession.period)] : [];
   if (selectedPerson) {
-    const person = (base.records.people || []).find((item) => item.name === selectedPerson);
+    // Legacy links used a printed source name.  Accept them alongside the
+    // canonical person_id so an old `person:Dr. Aigner` link now loads the
+    // resolved Heinrich Aigner record instead of becoming a dead selection.
+    const person = findFehllistePerson(base.records.people, selectedPerson);
     periods = personPeriods(person);
   }
   if (!periods.length) return base;
