@@ -41,6 +41,15 @@ const IDENTITY_LABELS = {
   unverified: "unverifiziert",
 };
 
+const ROLE_LABELS = {
+  abgeordneter: "Abgeordnetenbeitrag",
+  sitzungsleitung: "Sitzungsleitung",
+  bundesregierung: "Bundesregierung",
+  bundesrat_land: "Bundesrat/Landesregierung",
+  gast: "Gast",
+  unklar: "Unklar",
+};
+
 function normalizedIdentity(value) {
   return IDENTITY_VALUES.has(value) ? value : "";
 }
@@ -287,9 +296,16 @@ function showDetail(s) {
   // one "fix packet" request.
   const d = document.getElementById("detail");
   const identityLabel = s.identity_type ? ` | ${IDENTITY_LABELS[s.identity_type] || s.identity_type}` : "";
+  const roles = Object.entries(s.role_counts || {}).map(([role, count]) =>
+    `${esc(ROLE_LABELS[role] || role)}: ${Number(count).toLocaleString("de")}`).join(" | ");
+  const status = s.role_status_counts || {};
+  const roleStatus = `${Number(status.explicit || 0).toLocaleString("de")} explizit angegeben, `
+    + `${Number(status.inferred || 0).toLocaleString("de")} aus Mandatsdaten abgeleitet, `
+    + `${Number((status.unknown || 0) + (status.conflict || 0)).toLocaleString("de")} unklar`;
   d.innerHTML = `<h3>${esc(s.raw)}</h3>`
     + `<p class="muted">person_id: ${s.person_id || "(unaufgeloest)"}${identityLabel}`
     + ` | ${speechKindSummary(s)} | WP ${s.periods.join(", ")} | ${esc(s.parties.join(", ")) || "-"}</p>`
+    + (roles ? `<p>Rollen der Beiträge: ${roles}</p><p class="muted">Zuordnung: ${roleStatus}</p>` : "")
     + variantsHtml
     + `<h4>Quellen</h4>${srcs}`
     + `<div class="fixpacket-action">`
